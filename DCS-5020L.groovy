@@ -1,5 +1,5 @@
 /**
- *	D-Link DCS-5020L v1.0.1
+ *	D-Link DCS-5020L v1.1.0
  *  Modified from Generic Camera Device v1.0.07102014
  *
  *  Copyright 2014 patrick@patrickstuart.com
@@ -20,6 +20,7 @@ metadata {
 		capability "Image Capture"
 		capability "Sensor"
 		capability "Switch"
+        capability "Switch Level"
         capability "Refresh"
         
 		attribute "hubactionMode", "string"
@@ -78,9 +79,15 @@ metadata {
 			state "off", label: 'Motion Off', action: "switch.on", icon: "st.motion.motion.inactive", backgroundColor: "#ccffcc", nextState: "on"
             state "on", label: 'Motion On', action: "switch.off", icon: "st.motion.motion.active", backgroundColor: "#EE0000", nextState: "off"            
 		}
+        controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 2, inactiveLabel: false, range:"(0..100)") {
+            state "level", label: "Motion Detection Sensitivity", action:"switch level.setLevel"
+        }
+        valueTile("Sensitivity", "device.level", inactiveLabel: false){
+        	state "default", label:'${currentValue}%', unit:"%"
+        }
                  
         main "motion"
-        details(["cameraDetails", "take", "up", "motion", "left", "home", "right", "preset", "down", "refresh"])
+        details(["cameraDetails", "take", "up", "motion", "left", "home", "right", "preset", "down", "refresh", "levelSliderControl", "Sensitivity"])
     }
 }
 
@@ -125,8 +132,8 @@ def parse(String description) {
             log.debug "Motion is off"
             sendEvent(name: "switch", value: "off");
         }
-        /*
-        if(msg.body.contains("sensitivity="))
+        
+        if(msg.body.contains("MotionDetectionSensitivity="))
         {
         	//log.debug msg.body        
         	String[] lines = msg.body.split( '\n' )
@@ -138,7 +145,7 @@ def parse(String description) {
             
             sendEvent(name: "level",  value: "${senseValue[0]}")
             //sendEvent(name: "switch.setLevel", value: "${senseValue}")
-        }*/
+        }        
     }
 }
 catch (Exception e) { //needed to catch java.lang.ArrayIndexOutOfBoundsException when camera doesn't reply with anthing in the body
@@ -228,6 +235,46 @@ def motionCmd(int motion)
   
 }
 
+def sensitivityCmd(int percent)
+{
+	def userpassascii = "${CameraUser}:${CameraPassword}"
+	def userpass = "Basic " + userpassascii.encodeAsBase64().toString()
+    def host = CameraIP 
+    def hosthex = convertIPtoHex(host)
+    def porthex = convertPortToHex(CameraPort)
+    device.deviceNetworkId = "$hosthex:$porthex" 
+    
+    log.debug "The device id configured is: $device.deviceNetworkId"
+       
+    
+    log.debug "Sensitivity is ${percent}"
+    
+    def path = "/motion.cgi?MotionDetectionSensitivity=${percent}&ConfigReboot=No"
+    log.debug "path is: $path"
+        
+    def headers = [:] 
+    headers.put("HOST", "$host:$CameraPort")
+    headers.put("Authorization", userpass)
+    
+    log.debug "The Header is $headers"
+   
+  try {
+    def hubAction = new physicalgraph.device.HubAction(
+    	method: "GET",
+    	path: path,
+    	headers: headers
+        )
+        	
+   
+    log.debug hubAction
+    return hubAction
+    
+    }
+    catch (Exception e) {
+    	log.debug "Hit Exception $e on $hubAction"
+    }
+  
+}
 
 def putImageInS3(map) {
 	log.debug "firing s3"
@@ -461,4 +508,9 @@ def preset()
 {
 	log.debug "Moving to Preset position"
     presetCmd(CameraPreset.toInteger())
+}
+
+def setLevel(percent) {
+	log.debug "Executing 'setLevel'"
+	return sensitivityCmd(percent)	   
 }
