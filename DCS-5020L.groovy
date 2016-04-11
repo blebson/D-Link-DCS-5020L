@@ -1,5 +1,5 @@
 /**
- *	D-Link DCS-5020L v1.2.0
+ *	D-Link DCS-5020L v1.1.3
  *  Modified from Generic Camera Device v1.0.07102014
  *
  *  Copyright 2014 patrick@patrickstuart.com
@@ -36,6 +36,7 @@ metadata {
         command "nvOn"
         command "nvOff"
         command "nvAuto"
+        command "presetCommand"
 	}
 
     preferences {
@@ -592,6 +593,6 @@ def setLevel(percent) {
 	return sensitivityCmd(percent)	   
 }
 
-def deviceNotification(position) {
+def presetCommand(position) {
 	presetCmd(position.toInteger())
 }
