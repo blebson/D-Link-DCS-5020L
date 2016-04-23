@@ -15,7 +15,7 @@
  *
  */
 metadata {
-	definition (name: "DCS-5020L-Test", author: "blebson") {
+	definition (name: "DCS-5020L", author: "blebson") {
 		capability "Image Capture"
 		capability "Sensor"
 		capability "Switch"
